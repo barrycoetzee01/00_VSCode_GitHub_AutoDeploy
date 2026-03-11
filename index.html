@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VSCode → GitHub Auto-Deploy | The Complete Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --navy: #143b6b;
+    --navy-deep: #0f2f57;
+    --teal: #1f7a78;
+    --mint: #61c7b7;
+    --mint-soft: #dff4ef;
+    --blue-soft: #e9f1fb;
+    --panel: #f3f5f7;
+    --card: #ffffff;
+    --text: #16324f;
+    --muted: #58708d;
+    --line: #d9e2ec;
+    --warn: #f2a65a;
+    --danger: #db5b5b;
+    --success: #2ecc8f;
+    --code-bg: #0f2035;
+    --code-text: #61c7b7;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--panel);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 50%, var(--teal) 100%);
+    color: white;
+    padding: 80px 24px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(97,199,183,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse at 20% 80%, rgba(31,122,120,0.2) 0%, transparent 50%);
+  }
+  .hero-inner { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; }
+  .eyebrow {
+    display: inline-block;
+    background: rgba(97,199,183,0.2);
+    border: 1px solid rgba(97,199,183,0.4);
+    color: var(--mint);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--mint); }
+  .hero p {
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
+    color: rgba(255,255,255,0.8);
+    max-width: 620px;
+    margin: 0 auto 36px;
+  }
+  .scorebar {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+  .scorecell {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 14px 28px;
+    border-radius: 4px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .scorecell strong { display: block; font-size: 1.5rem; font-family: 'Syne', sans-serif; font-weight: 700; color: var(--mint); }
+  .scorecell span { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+  .arrow-cell { display: flex; align-items: center; color: var(--mint); font-size: 1.4rem; padding: 0 4px; }
+
+  /* ── FLOW PIPELINE ── */
+  .pipeline-section {
+    background: var(--navy-deep);
+    padding: 48px 24px;
+  }
+  .section-label {
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin-bottom: 32px;
+  }
+  .pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .pipe-step {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(97,199,183,0.25);
+    border-radius: 8px;
+    padding: 18px 20px;
+    text-align: center;
+    min-width: 130px;
+    flex: 1;
+    max-width: 160px;
+    position: relative;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .pipe-step:hover { background: rgba(97,199,183,0.1); transform: translateY(-3px); }
+  .pipe-icon { font-size: 1.8rem; margin-bottom: 8px; }
+  .pipe-step h4 { color: white; font-size: 0.8rem; font-family: 'Syne', sans-serif; font-weight: 700; margin-bottom: 4px; }
+  .pipe-step p { color: rgba(255,255,255,0.5); font-size: 0.7rem; }
+  .pipe-arrow { color: var(--mint); font-size: 1.4rem; padding: 0 8px; flex-shrink: 0; }
+
+  /* ── MAIN CONTENT ── */
+  .content { max-width: 960px; margin: 0 auto; padding: 48px 24px 0; }
+
+  /* ── PHASE HEADERS ── */
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 56px 0 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--line);
+  }
+  .phase-badge {
+    background: var(--navy);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .phase-badge.once { background: var(--teal); }
+  .phase-badge.auto { background: var(--success); color: #0a3322; }
+  .phase-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    font-weight: 800;
+    color: var(--navy);
+  }
+
+  /* ── STEP CARDS ── */
+  .steps-grid { display: grid; gap: 16px; }
+  .step-card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(20,59,107,0.06);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .step-card:hover { box-shadow: 0 6px 20px rgba(20,59,107,0.1); transform: translateY(-2px); }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--blue-soft);
+  }
+  .step-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-num.teal { background: var(--teal); }
+  .step-num.success { background: var(--success); color: #0a3322; }
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--navy);
+    flex: 1;
+  }
+  .step-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(20,59,107,0.1);
+    color: var(--navy);
+    white-space: nowrap;
+  }
+  .step-tag.once { background: rgba(31,122,120,0.12); color: var(--teal); }
+  .step-tag.auto { background: rgba(46,204,143,0.12); color: #1a7a52; }
+  .step-body { padding: 20px; }
+  .step-body p { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+  .step-body p:last-child { margin-bottom: 0; }
+  .step-body strong { color: var(--text); }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 12px 0;
+    position: relative;
+    overflow-x: auto;
+  }
+  .code-block pre {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--code-text);
+    line-height: 1.7;
+    white-space: pre;
+  }
+  .code-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(97,199,183,0.5);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: rgba(97,199,183,0.15);
+    border: 1px solid rgba(97,199,183,0.3);
+    color: var(--mint);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .copy-btn:hover { background: rgba(97,199,183,0.3); }
+
+  /* ── ALERTS ── */
+  .alert {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 0.875rem;
+  }
+  .alert-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+  .alert.warn { background: rgba(242,166,90,0.12); border-left: 3px solid var(--warn); }
+  .alert.success { background: rgba(46,204,143,0.1); border-left: 3px solid var(--success); }
+  .alert.danger { background: rgba(219,91,91,0.1); border-left: 3px solid var(--danger); }
+  .alert.info { background: var(--mint-soft); border-left: 3px solid var(--teal); }
+  .alert p { margin: 0; color: var(--text); }
+  .alert strong { color: var(--navy); }
+
+  /* ── CHECKLIST ── */
+  .checklist { list-style: none; margin: 12px 0; }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-icon { color: var(--success); font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .checklist li span { color: var(--text); }
+  .checklist li code {
+    background: var(--blue-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--navy);
+  }
+
+  /* ── INLINE CODE ── */
+  code {
+    background: var(--blue-soft);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82em;
+    color: var(--navy);
+  }
+
+  /* ── TWO COLUMN ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+  .mini-card {
+    background: var(--blue-soft);
+    border-radius: 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+  }
+  .mini-card h5 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--navy);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .mini-card p { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow-diagram {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 28px;
+    margin: 24px 0;
+    text-align: center;
+  }
+  .flow-diagram h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .flow-box {
+    background: var(--navy);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    min-width: 110px;
+    text-align: center;
+  }
+  .flow-box.teal { background: var(--teal); }
+  .flow-box.mint { background: var(--mint); color: var(--navy-deep); font-weight: 700; }
+  .flow-box.success { background: var(--success); color: #0a3322; }
+  .flow-down { color: var(--mint); font-size: 1.2rem; width: 100%; text-align: center; margin: 2px 0; }
+  .flow-right { color: var(--mint); font-size: 1.2rem; padding: 0 4px; }
+
+  /* ── TROUBLESHOOT ── */
+  .trouble-grid { display: grid; gap: 12px; margin: 12px 0; }
+  .trouble-item {
+    background: var(--card);
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .trouble-prob {
+    background: rgba(219,91,91,0.08);
+    border-bottom: 1px solid rgba(219,91,91,0.15);
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #8b2020;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .trouble-fix {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  /* ── FINAL CHEATSHEET ── */
+  .cheatsheet {
+    background: var(--navy-deep);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 24px 0;
+    color: white;
+  }
+  .cheatsheet h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--mint);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .cheat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .cheat-item {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(97,199,183,0.2);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .cheat-item .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(97,199,183,0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .cheat-item .value {
+    font-size: 0.875rem;
+    color: white;
+    font-weight: 500;
+  }
+  .cheat-item .value code {
+    background: rgba(97,199,183,0.15);
+    color: var(--mint);
+    font-size: 0.8em;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--navy-deep);
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    padding: 28px 24px;
+    margin-top: 64px;
+    font-size: 0.85rem;
+  }
+  .footer .brand {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--mint);
+    margin-bottom: 4px;
+  }
+
+  /* ── NAV DOTS ── */
+  .nav-dots {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+  }
+  .nav-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(20,59,107,0.2);
+    border: 2px solid rgba(20,59,107,0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .nav-dot:hover, .nav-dot.active { background: var(--teal); border-color: var(--teal); transform: scale(1.4); }
+  @media (max-width: 768px) { .nav-dots { display: none; } }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero-inner { animation: fadeUp 0.7s ease both; }
+  .step-card { animation: fadeUp 0.5s ease both; }
+
+  /* ── SEPARATOR ── */
+  .sep { height: 1px; background: var(--line); margin: 8px 0; }
+
+  /* ── BOTTOM PADDING ── */
+  .bottom-pad { padding-bottom: 64px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .scorecell { min-width: 100px; padding: 10px 14px; }
+    .pipe-step { min-width: 90px; }
+    .two-col { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .arrow-cell, .pipe-arrow { display: none; }
+    .pipeline { gap: 8px; }
+    .pipe-step { max-width: 100%; }
+    .scorebar { gap: 8px; }
+    .scorecell { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV DOTS -->
+<nav class="nav-dots" aria-label="Page sections">
+  <a class="nav-dot active" href="#hero" title="Top"></a>
+  <a class="nav-dot" href="#prereq" title="Prerequisites"></a>
+  <a class="nav-dot" href="#one-time" title="One-Time Setup"></a>
+  <a class="nav-dot" href="#script" title="The Script"></a>
+  <a class="nav-dot" href="#vscode" title="VS Code"></a>
+  <a class="nav-dot" href="#test" title="Test It"></a>
+  <a class="nav-dot" href="#trouble" title="Troubleshooting"></a>
+</nav>
+
+<!-- HERO -->
+<header class="hero" id="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Complete DevOps Setup Guide</div>
+    <h1>VSCode → GitHub<br/><span>Auto-Deploy Forever</span></h1>
+    <p>Set this up <strong style="color:white">once</strong> and every future project publishes itself live the moment you hit <strong style="color:white">CTRL+S</strong>. No clicking. No terminal commands. No manual steps. Ever.</p>
+    <div class="scorebar">
+      <div class="scorecell"><strong>1×</strong><span>Setup Only</span></div>
+      <div class="arrow-cell">→</div>
+      <div class="scorecell"><strong>∞</strong><span>Projects</span></div>
+      <div class="arrow-cell">→</div>
+      <div class="scorecell"><strong>CTRL+S</strong><span>To Go Live</span></div>
+      <div class="arrow-cell">→</div>
+      <div class="scorecell" style="background:rgba(46,204,143,0.15);border-color:rgba(46,204,143,0.3)"><strong style="color:#2ecc8f">60s</strong><span>Live Online</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- PIPELINE -->
+<div class="pipeline-section">
+  <p class="section-label">How It Works — The Full Automated Pipeline</p>
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-icon">✏️</div>
+      <h4>You Type</h4>
+      <p>Edit HTML in VS Code</p>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">💾</div>
+      <h4>CTRL+S</h4>
+      <p>Save the file</p>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">⚡</div>
+      <h4>Auto-Fires</h4>
+      <p>Run on Save triggers</p>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">📦</div>
+      <h4>Git Commits</h4>
+      <p>Changes packaged</p>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">☁️</div>
+      <h4>GitHub Push</h4>
+      <p>Repo auto-created if new</p>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" style="border-color:rgba(46,204,143,0.4)">
+      <div class="pipe-icon">🌍</div>
+      <h4>Live!</h4>
+      <p>World sees it in ~60s</p>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="content">
+
+  <!-- PHASE 0: PREREQUISITES -->
+  <div class="phase-header" id="prereq">
+    <div class="phase-badge">Before You Start</div>
+    <h2>Check Your 3 Requirements</h2>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">✓</div>
+      <div class="step-title">Make sure you have these 3 things</div>
+      <div class="step-tag">5 minutes</div>
+    </div>
+    <div class="step-body">
+      <div class="two-col">
+        <div class="mini-card">
+          <h5>✅ Already Have</h5>
+          <ul class="checklist">
+            <li><span class="check-icon">✓</span><span><strong>VS Code</strong> — you're using it</span></li>
+            <li><span class="check-icon">✓</span><span><strong>GitHub account</strong> at github.com</span></li>
+          </ul>
+        </div>
+        <div class="mini-card">
+          <h5>🔍 Need to Check / Install</h5>
+          <ul class="checklist">
+            <li><span class="check-icon">→</span><span><strong>Git</strong> — check below</span></li>
+            <li><span class="check-icon">→</span><span><strong>GitHub CLI</strong> — check below</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">💡</div>
+        <p>Open <strong>Command Prompt</strong>: Press <code>Windows + R</code>, type <code>cmd</code>, press Enter.</p>
+      </div>
+
+      <p><strong>Test Git — type this and press Enter:</strong></p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>git --version</pre>
+      </div>
+      <div class="two-col">
+        <div class="alert success"><div class="alert-icon">✅</div><p><strong>Good:</strong> Shows <code>git version 2.x.x</code> → you have it!</p></div>
+        <div class="alert danger"><div class="alert-icon">❌</div><p><strong>Missing:</strong> Go to <strong>git-scm.com</strong> → Download → Install (keep clicking Next)</p></div>
+      </div>
+
+      <p style="margin-top:16px"><strong>Test GitHub CLI — type this and press Enter:</strong></p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>gh --version</pre>
+      </div>
+      <div class="two-col">
+        <div class="alert success"><div class="alert-icon">✅</div><p><strong>Good:</strong> Shows <code>gh version 2.x.x</code></p></div>
+        <div class="alert danger"><div class="alert-icon">❌</div><p><strong>Missing:</strong> Go to <strong>cli.github.com</strong> → Download → Install → <strong>Close and reopen CMD</strong> → test again</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 1: ONE TIME SETUP -->
+  <div class="phase-header" id="one-time">
+    <div class="phase-badge once">Phase 1</div>
+    <h2>One-Time Setup — Do This Once, Never Again</h2>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-head">
+        <div class="step-num teal">1</div>
+        <div class="step-title">Connect Your Computer to GitHub</div>
+        <div class="step-tag once">Once only</div>
+      </div>
+      <div class="step-body">
+        <p>This permanently links your computer to your GitHub account. You will <strong>never need to do this again</strong> on this computer.</p>
+        <p>In Command Prompt, type:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>gh auth login</pre>
+        </div>
+        <p>When it asks questions, choose <strong>exactly</strong> these answers:</p>
+        <ul class="checklist">
+          <li><span class="check-icon">→</span><span>Where do you use GitHub? → <strong>GitHub.com</strong></span></li>
+          <li><span class="check-icon">→</span><span>Preferred protocol? → <strong>HTTPS</strong></span></li>
+          <li><span class="check-icon">→</span><span>Authenticate Git with your credentials? → <strong>Yes</strong></span></li>
+          <li><span class="check-icon">→</span><span>How would you like to authenticate? → <strong>Login with a web browser</strong></span></li>
+        </ul>
+        <div class="alert info">
+          <div class="alert-icon">🌐</div>
+          <p>It will show you a code like <code>ABCD-1234</code> and open your browser. Type that code in the browser and click <strong>Authorize</strong>. Done!</p>
+        </div>
+        <div class="alert success">
+          <div class="alert-icon">✅</div>
+          <p>You'll see: <strong>"Logged in as YOUR_USERNAME"</strong> — your computer is permanently connected!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-card">
+      <div class="step-head">
+        <div class="step-num teal">2</div>
+        <div class="step-title">Tell Git Your Name and Email</div>
+        <div class="step-tag once">Once only</div>
+      </div>
+      <div class="step-body">
+        <p>Replace with <strong>your actual name and the email you used for GitHub</strong>:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>git config --global user.name "Your Name"
+git config --global user.email "your@email.com"</pre>
+        </div>
+        <div class="alert warn">
+          <div class="alert-icon">⚠️</div>
+          <p><strong>Use the same email as your GitHub account!</strong> The quotes are required. Type each line separately and press Enter after each.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-card">
+      <div class="step-head">
+        <div class="step-num teal">3</div>
+        <div class="step-title">Install the "Run on Save" VS Code Extension</div>
+        <div class="step-tag once">Once only</div>
+      </div>
+      <div class="step-body">
+        <p>This extension watches for your <code>CTRL+S</code> and fires the auto-publish script automatically.</p>
+        <ul class="checklist">
+          <li><span class="check-icon">1</span><span>In VS Code, click the <strong>Extensions icon</strong> on the left sidebar (looks like 4 squares)</span></li>
+          <li><span class="check-icon">2</span><span>Search for: <code>Run on Save</code></span></li>
+          <li><span class="check-icon">3</span><span>Find the one by <strong>emeraldwalk</strong> (it says "Run commands when a file is saved")</span></li>
+          <li><span class="check-icon">4</span><span>Click the blue <strong>Install</strong> button</span></li>
+        </ul>
+        <div class="alert warn">
+          <div class="alert-icon">⚠️</div>
+          <p><strong>Important:</strong> Make sure it's by <strong>emeraldwalk</strong> specifically — there are other extensions with similar names that won't work.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2: THE SCRIPT -->
+  <div class="phase-header" id="script">
+    <div class="phase-badge once">Phase 2</div>
+    <h2>Create the Magic Auto-Publish Script</h2>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num teal">4</div>
+      <div class="step-title">Create the auto-publish.bat File</div>
+      <div class="step-tag once">Once only</div>
+    </div>
+    <div class="step-body">
+      <p>This script does ALL the work automatically. Create it <strong>once</strong> and it works for every future project forever.</p>
+
+      <ul class="checklist">
+        <li><span class="check-icon">1</span><span>Press <code>Windows + R</code>, type <code>notepad</code>, press Enter</span></li>
+        <li><span class="check-icon">2</span><span>Copy the <strong>entire script below</strong> and paste it into Notepad</span></li>
+        <li><span class="check-icon">3</span><span>Replace <code>YOUR_GITHUB_USERNAME</code> with your actual GitHub username (e.g. <code>barrycoetzee01</code>)</span></li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-label">C:\Users\YOUR_WINDOWS_USERNAME\auto-publish.bat</div>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>@echo off
+cd /d "%~1"
+
+echo [AUTO-PUBLISH] Starting...
+
+if not exist ".git" (
+    echo [AUTO-PUBLISH] New project! Setting up...
+    for %%I in (.) do set REPO_NAME=%%~nxI
+
+    git init
+    git add .
+    git commit -m "First publish!"
+
+    gh repo create "%REPO_NAME%" --public --source=. --remote=origin --push
+
+    echo [AUTO-PUBLISH] Creating GitHub Actions auto-deploy...
+    mkdir .github\workflows 2^>nul
+
+    (
+    echo name: Deploy to GitHub Pages
+    echo on:
+    echo   push:
+    echo     branches: ['**']
+    echo permissions:
+    echo   contents: read
+    echo   pages: write
+    echo   id-token: write
+    echo jobs:
+    echo   deploy:
+    echo     environment:
+    echo       name: github-pages
+    echo     runs-on: ubuntu-latest
+    echo     steps:
+    echo       - uses: actions/checkout@v4
+    echo       - uses: actions/configure-pages@v4
+    echo       - uses: actions/upload-pages-artifact@v3
+    echo         with:
+    echo           path: '.'
+    echo       - id: deployment
+    echo         uses: actions/deploy-pages@v4
+    ) > .github\workflows\deploy.yml
+
+    git add .
+    git commit -m "Add auto-deploy workflow"
+    git push origin master
+
+    echo.
+    echo [AUTO-PUBLISH] DONE! Live in ~60 seconds at:
+    for %%I in (.) do echo https://YOUR_GITHUB_USERNAME.github.io/%%~nxI
+    echo.
+
+) else (
+    echo [AUTO-PUBLISH] Pushing update...
+    git add .
+    git commit -m "Updated %date% %time%"
+    git push origin master
+    echo [AUTO-PUBLISH] Done! Site updated live!
+)</pre>
+      </div>
+
+      <div class="alert warn">
+        <div class="alert-icon">⚠️</div>
+        <p>Replace <strong>YOUR_GITHUB_USERNAME</strong> on the second-to-last line with your actual username before saving!</p>
+      </div>
+
+      <p style="margin-top:16px"><strong>Now save it — follow these steps exactly:</strong></p>
+      <ul class="checklist">
+        <li><span class="check-icon">1</span><span>Click <strong>File → Save As</strong></span></li>
+        <li><span class="check-icon">2</span><span>Navigate to <code>C:\Users\YOUR_WINDOWS_USERNAME\</code> (your home folder)</span></li>
+        <li><span class="check-icon">3</span><span>In the filename box type: <code>auto-publish.bat</code></span></li>
+        <li><span class="check-icon">4</span><span>In the <strong>"Save as type"</strong> dropdown — change it to <strong>All Files (*.*)</strong></span></li>
+        <li><span class="check-icon">5</span><span>Click <strong>Save</strong></span></li>
+      </ul>
+      <div class="alert success">
+        <div class="alert-icon">✅</div>
+        <p>The file icon should look like a gear/computer icon and say <strong>"Windows Batch File"</strong> as the type. If it says .bat.txt you forgot step 4 — delete it and try again.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 3: VSCODE SETTINGS -->
+  <div class="phase-header" id="vscode">
+    <div class="phase-badge once">Phase 3</div>
+    <h2>Connect VS Code to the Script</h2>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num teal">5</div>
+      <div class="step-title">Update VS Code Settings to Fire on Every Save</div>
+      <div class="step-tag once">Once only</div>
+    </div>
+    <div class="step-body">
+      <p>This is the final connection — telling VS Code to run your script every time you save an HTML file.</p>
+
+      <ul class="checklist">
+        <li><span class="check-icon">1</span><span>In VS Code, press <code>CTRL+SHIFT+P</code></span></li>
+        <li><span class="check-icon">2</span><span>Type <code>Open User Settings JSON</code> and click it</span></li>
+        <li><span class="check-icon">3</span><span>You'll see a file with <code>{ }</code> containing your settings</span></li>
+      </ul>
+
+      <div class="alert warn">
+        <div class="alert-icon">⚠️</div>
+        <p><strong>Important:</strong> Find the <strong>last closing <code>}</code></strong> in the file. Add a comma after the line above it, then paste the block below <strong>before</strong> that final <code>}</code>.</p>
+      </div>
+
+      <p><strong>Add this to your settings.json:</strong></p>
+      <div class="code-block">
+        <div class="code-label">settings.json — add before the final }</div>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>"emeraldwalk.runonsave": {
+    "commands": [
+        {
+            "match": "\\.(html|css|js)$",
+            "isAsync": true,
+            "cmd": "cmd /c C:\\Users\\YOUR_WINDOWS_USERNAME\\auto-publish.bat \"${fileDirname}\""
+        }
+    ]
+}</pre>
+      </div>
+
+      <div class="alert warn">
+        <div class="alert-icon">⚠️</div>
+        <p>Replace <strong>YOUR_WINDOWS_USERNAME</strong> with your actual Windows username (the name of your user folder, e.g. <code>user</code> or <code>john</code>). Check it in File Explorer: <code>C:\Users\</code> — your folder name is right there.</p>
+      </div>
+
+      <p><strong>Your settings.json should end up looking like this:</strong></p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>{
+    "workbench.colorTheme": "...",
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    ... (your other settings) ...,
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": "\\.(html|css|js)$",
+                "isAsync": true,
+                "cmd": "cmd /c C:\\Users\\YOUR_USERNAME\\auto-publish.bat \"${fileDirname}\""
+            }
+        ]
+    }
+}</pre>
+      </div>
+
+      <ul class="checklist">
+        <li><span class="check-icon">4</span><span>Press <code>CTRL+S</code> to save settings.json</span></li>
+        <li><span class="check-icon">5</span><span><strong>Close VS Code completely</strong> and reopen it</span></li>
+      </ul>
+
+      <div class="alert info">
+        <div class="alert-icon">💡</div>
+        <p><strong>Pro tip:</strong> Also change your terminal to Command Prompt (not PowerShell) for best results. In settings.json, set: <code>"terminal.integrated.defaultProfile.windows": "Command Prompt"</code></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4: TEST IT -->
+  <div class="phase-header" id="test">
+    <div class="phase-badge auto">Phase 4</div>
+    <h2>Test It — The Big Moment!</h2>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num success">6</div>
+      <div class="step-title">First Project Test — Watch the Magic Happen</div>
+      <div class="step-tag auto">Every new project</div>
+    </div>
+    <div class="step-body">
+      <ul class="checklist">
+        <li><span class="check-icon">1</span><span>Create a new folder for your project (e.g. <code>my-website</code>)</span></li>
+        <li><span class="check-icon">2</span><span>Put your <code>index.html</code> inside it</span></li>
+        <li><span class="check-icon">3</span><span>In VS Code: <strong>File → Open Folder</strong> → select your project folder</span></li>
+        <li><span class="check-icon">4</span><span>Open <code>index.html</code> in VS Code</span></li>
+        <li><span class="check-icon">5</span><span>Make any small change (add a space, change a word)</span></li>
+        <li><span class="check-icon">6</span><span>Press <strong>CTRL+S</strong></span></li>
+      </ul>
+
+      <div class="alert info">
+        <div class="alert-icon">👀</div>
+        <p>Click the <strong>OUTPUT</strong> tab at the bottom of VS Code. In the dropdown on the right, select <strong>"Run On Save"</strong>. You should see the script running!</p>
+      </div>
+
+      <p><strong>What you should see in the Output tab:</strong></p>
+      <div class="code-block">
+        <pre>[AUTO-PUBLISH] Starting...
+[AUTO-PUBLISH] New project! Setting up...
+Initialized empty Git repository...
+[master (root-commit)] First publish!
+✓ Created repository YOUR_USERNAME/my-website on github.com
+✓ Pushed commits to https://github.com/...
+[AUTO-PUBLISH] Add auto-deploy workflow
+[AUTO-PUBLISH] DONE! Live in ~60 seconds at:
+https://YOUR_USERNAME.github.io/my-website</pre>
+      </div>
+
+      <div class="alert warn">
+        <div class="alert-icon">⚠️</div>
+        <p><strong>First time on a new project only:</strong> Go to <code>github.com/YOUR_USERNAME/REPO_NAME/settings/pages</code> and under <strong>Source</strong> change to <strong>"GitHub Actions"</strong> then click Save. This is the only manual click needed — future saves are 100% automatic.</p>
+      </div>
+
+      <div class="flow-diagram">
+        <h3>After First Save — Every Save After Is Fully Automatic</h3>
+        <div class="flow-row">
+          <div class="flow-box">CTRL+S</div>
+          <div class="flow-right">→</div>
+          <div class="flow-box teal">Script fires</div>
+          <div class="flow-right">→</div>
+          <div class="flow-box">git add + commit</div>
+          <div class="flow-right">→</div>
+          <div class="flow-box teal">git push</div>
+          <div class="flow-right">→</div>
+          <div class="flow-box success">🌍 Live in 60s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num success">7</div>
+      <div class="step-title">Verify Your Live Website</div>
+      <div class="step-tag auto">Every update</div>
+    </div>
+    <div class="step-body">
+      <p>After pushing, wait about <strong>60 seconds</strong> then visit:</p>
+      <div class="code-block">
+        <pre>https://YOUR_GITHUB_USERNAME.github.io/YOUR_FOLDER_NAME</pre>
+      </div>
+      <div class="alert warn">
+        <div class="alert-icon">⚠️</div>
+        <p><strong>Don't see your changes?</strong> Your browser is showing an old cached version. Press <code>CTRL+SHIFT+R</code> (hard refresh) to force it to load the newest version. This is a browser thing, not a problem with your setup.</p>
+      </div>
+      <div class="alert success">
+        <div class="alert-icon">🎉</div>
+        <p>You can also check <code>github.com/YOUR_USERNAME/REPO_NAME/actions</code> to watch the deployment happen in real time with green ✅ checkmarks!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TROUBLESHOOTING -->
+  <div class="phase-header" id="trouble">
+    <div class="phase-badge" style="background:#db5b5b">Troubleshooting</div>
+    <h2>If Something Goes Wrong</h2>
+  </div>
+
+  <div class="trouble-grid">
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ Nothing happens when I save — Output tab is blank</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>
+          Press <code>CTRL+SHIFT+P</code> → type <strong>"Run on Save"</strong> → if you see <strong>"Enable"</strong>, click it. The extension was turned off. Also check the Output dropdown is set to <strong>"Run On Save"</strong> not "Tasks".
+        </div>
+      </div>
+    </div>
+
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ 'gh' is not recognized as a command</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>Close Command Prompt completely and open a <strong>fresh new one</strong>. The installer added GitHub CLI but CMD didn't see it until restarted. If still failing, restart your whole computer.</div>
+      </div>
+    </div>
+
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ Script runs but site doesn't update</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>Two possible causes: (1) Press <code>CTRL+SHIFT+R</code> to hard-refresh your browser — you're seeing a cached version. (2) Go to your repo Settings → Pages → change Source to <strong>"GitHub Actions"</strong> and Save.</div>
+      </div>
+    </div>
+
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ auto-publish.bat saved as auto-publish.bat.txt</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>Delete the file. In Notepad's Save As dialog, change <strong>"Save as type"</strong> to <strong>All Files (*.*)</strong> BEFORE typing the filename. Then type <code>auto-publish.bat</code> and save.</div>
+      </div>
+    </div>
+
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ "remote: This repository moved" message in output</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>GitHub renamed your repo (changed --- to -). Fix it once: in VS Code terminal run <code>git remote set-url origin https://github.com/USERNAME/CORRECT-REPO-NAME.git</code> — copy the exact URL from GitHub.</div>
+      </div>
+    </div>
+
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ GitHub Pages shows "None" branch option (no "main")</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>That's normal! Older Git versions use <strong>"master"</strong> instead of "main" — they work exactly the same. Select <strong>master</strong> and click Save. Both work perfectly.</div>
+      </div>
+    </div>
+
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ GitHub Actions page shows no workflow / "Configure" buttons</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>The deploy.yml file didn't get created. In VS Code terminal, run the auto-publish.bat manually once: <code>cmd /c "C:\Users\YOUR_USERNAME\auto-publish.bat" "C:\PATH\TO\YOUR\PROJECT"</code> — it will create the workflow file and push it.</div>
+      </div>
+    </div>
+
+    <div class="trouble-item">
+      <div class="trouble-prob">❌ Script ran but URL printed blank / incomplete</div>
+      <div class="trouble-fix">
+        <span>✅</span>
+        <div>Check your GitHub profile at <code>github.com/YOUR_USERNAME</code> — your repo was still created successfully. The URL format is always: <code>https://YOUR_USERNAME.github.io/FOLDER-NAME</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div class="cheatsheet">
+    <h3>🗺️ Your Permanent Quick Reference</h3>
+    <div class="cheat-grid">
+      <div class="cheat-item">
+        <div class="label">Publish a change</div>
+        <div class="value">Just press <code>CTRL+S</code> — that's it!</div>
+      </div>
+      <div class="cheat-item">
+        <div class="label">See if it deployed</div>
+        <div class="value">Check <code>github.com/USERNAME/REPO/actions</code></div>
+      </div>
+      <div class="cheat-item">
+        <div class="label">Not seeing update on site</div>
+        <div class="value">Press <code>CTRL+SHIFT+R</code> to hard refresh</div>
+      </div>
+      <div class="cheat-item">
+        <div class="label">Your live site URL</div>
+        <div class="value"><code>USERNAME.github.io/FOLDER-NAME</code></div>
+      </div>
+      <div class="cheat-item">
+        <div class="label">New project setup</div>
+        <div class="value">Just save! Script auto-creates repo + pages</div>
+      </div>
+      <div class="cheat-item">
+        <div class="label">One manual step per new project</div>
+        <div class="value">Settings → Pages → Source: GitHub Actions</div>
+      </div>
+      <div class="cheat-item">
+        <div class="label">Where script lives</div>
+        <div class="value"><code>C:\Users\USERNAME\auto-publish.bat</code></div>
+      </div>
+      <div class="cheat-item">
+        <div class="label">Time to go live</div>
+        <div class="value">~60 seconds after CTRL+S</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL SETUP SUMMARY -->
+  <div class="flow-diagram" style="background:var(--navy-deep);border-color:rgba(97,199,183,0.2)">
+    <h3 style="color:var(--mint)">Complete Setup Summary — Done Once, Works Forever</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;text-align:left">
+      <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(97,199,183,0.2);border-radius:8px;padding:14px">
+        <div style="color:var(--mint);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;margin-bottom:8px">INSTALL</div>
+        <ul style="list-style:none;color:rgba(255,255,255,0.8);font-size:0.82rem">
+          <li style="padding:3px 0">✓ Git from git-scm.com</li>
+          <li style="padding:3px 0">✓ GitHub CLI from cli.github.com</li>
+          <li style="padding:3px 0">✓ Run on Save (emeraldwalk)</li>
+        </ul>
+      </div>
+      <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(97,199,183,0.2);border-radius:8px;padding:14px">
+        <div style="color:var(--mint);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;margin-bottom:8px">CONFIGURE</div>
+        <ul style="list-style:none;color:rgba(255,255,255,0.8);font-size:0.82rem">
+          <li style="padding:3px 0">✓ gh auth login</li>
+          <li style="padding:3px 0">✓ git config name + email</li>
+          <li style="padding:3px 0">✓ auto-publish.bat created</li>
+          <li style="padding:3px 0">✓ settings.json updated</li>
+        </ul>
+      </div>
+      <div style="background:rgba(46,204,143,0.08);border:1px solid rgba(46,204,143,0.25);border-radius:8px;padding:14px">
+        <div style="color:#2ecc8f;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;margin-bottom:8px">FOREVER AFTER</div>
+        <ul style="list-style:none;color:rgba(255,255,255,0.8);font-size:0.82rem">
+          <li style="padding:3px 0">🚀 CTRL+S = published</li>
+          <li style="padding:3px 0">🌍 Live in ~60 seconds</li>
+          <li style="padding:3px 0">♾️ Works for every project</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="bottom-pad"></div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="brand">Brought to you by ChelcamTech</div>
+  <div>VSCode → GitHub Auto-Deploy Guide &nbsp;|&nbsp; Built for humans, not robots</div>
+</footer>
+
+<script>
+  // Copy button functionality
+  function copyCode(btn) {
+    const pre = btn.nextElementSibling || btn.parentElement.querySelector('pre');
+    const text = pre ? pre.textContent : '';
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.style.background = 'rgba(46,204,143,0.3)';
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.style.background = '';
+      }, 2000);
+    });
+  }
+
+  // Nav dot active state
+  const dots = document.querySelectorAll('.nav-dot');
+  const sections = ['hero','prereq','one-time','script','vscode','test','trouble'];
+  function updateDots() {
+    const scrollY = window.scrollY + 200;
+    sections.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el && el.offsetTop <= scrollY) {
+        dots.forEach(d => d.classList.remove('active'));
+        if (dots[i]) dots[i].classList.add('active');
+      }
+    });
+  }
+  window.addEventListener('scroll', updateDots);
+
+  // Animate cards on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.step-card, .trouble-item').forEach(card => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(16px)';
+    card.style.transition = 'opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s, transform 0.2s';
+    observer.observe(card);
+  });
+</script>
+</body>
+</html>
